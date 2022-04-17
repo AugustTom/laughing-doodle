@@ -9,8 +9,5 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "ebay-node-api": "^2.9.0"
-  }
+  "license": "ISC"
 }
