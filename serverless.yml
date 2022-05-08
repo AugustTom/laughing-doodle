@@ -17,11 +17,7 @@ provider:
 
 # The `functions` block defines what code to deploy
 functions:
-  helloWorld:
-    handler: handler.helloWorld
-    # The `events` block defines how to trigger the handler.helloWorld code
-    events:
-      - http:
-          path: hello-world
-          method: get
-          cors: true
+    cronHandler:
+      handler: handler.laughingDoodle
+      events:
+        - schedule: cron(0 8 1 * ? *)
