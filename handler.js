@@ -2,6 +2,9 @@
 const Discogs = require('disconnect').Client;
 const pk = require('./package.json');
 
+const aws = require('aws-sdk');
+const ses = new aws.SES({region: 'eu-west-2'});
+
 /**PLAN:
  *  Get a list of the releases to check
  *  Connect to the Discogs API
@@ -10,7 +13,10 @@ const pk = require('./package.json');
  * */
 
 const RELEASES = require('./releases.json');
-const EMAIL_ADDRESS = 'aa@aa.com';
+
+//Email needs to be verified before it can be used.
+const EMAIL_ADDRESS = 'auguste.tomaseviciute@gmail.com';
+const EMAIL_SUBJECT = 'Discogs vinyls release info';
 
 const getReleaseInfo = async (releaseId, apiDB) => {
     try {
@@ -20,38 +26,54 @@ const getReleaseInfo = async (releaseId, apiDB) => {
     }
 };
 
-const sendEmail = async (emailAddress, body) => {
-    const response = {
-        statusCode: 200,
-        headers: {
-            'Access-Control-Allow-Origin': '*', // Required for CORS support to work
+const sendMail = async (emailAddress, body) => {
+    console.log(body);
+
+    const emailParams = {
+        Destination: {
+            ToAddresses: [emailAddress],
         },
-        body: JSON.stringify({
-            message: body,
-            // input: event,
-        }),
+        Message: {
+            Body: {
+                Text: {Data: body},
+            },
+            Subject: {Data: EMAIL_SUBJECT},
+        },
+        Source: "auguste.tomaseviciute@gmail.com",
     };
-    console.log(response);
-    console.log(`-------------------------------------------------------`);
-    console.log(emailAddress, body);
+
+    try {
+        await ses.sendEmail(emailParams).promise();
+        console.log(`MAIL SENT SUCCESSFULLY!!`);
+    } catch (e) {
+        console.log(`FAILURE IN SENDING MAIL!!`, e);
+    }
+    return;
 }
 
 const collectAllInfo = async () => {
     const db = new Discogs(`${pk}.name}/${pk}.version}`).database();
-    let messageBody = '';
+    let messageBody = '<h1>Discogs vinyls release info</h1> <br/>';
     for (let release of RELEASES) {
         const releaseInfo = await getReleaseInfo(release, db);
         if (releaseInfo) {
-            messageBody += `${releaseInfo.title} | ${releaseInfo.lowest_price} - ${releaseInfo.num_for_sale} vinyls available\n`;
+            messageBody += formatMessage(releaseInfo);
         }
     }
-    await sendEmail(EMAIL_ADDRESS, messageBody);
+
+    await sendMail(EMAIL_ADDRESS, messageBody);
 }
 
-// collectAllInfo();
+const formatMessage = (releaseInfo) => {
+    if (releaseInfo.num_for_sale > 0) {
+        return `${releaseInfo.title} |  ${releaseInfo.num_for_sale} vinyls available. Starting from ${releaseInfo.lowest_price}€  - https://www.discogs.com/sell/release/${releaseInfo.id} \n`;
+    } else {
+        return `${releaseInfo.title} |  No vinyls available`;
+    }
+};
 
+collectAllInfo()
 module.exports.laughingDoodle = (event, context, callback) => {
     collectAllInfo();
-    callback(null, response);
 };
 
