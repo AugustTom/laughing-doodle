@@ -1,22 +1,29 @@
 'use strict';
 const Discogs = require('disconnect').Client;
 const pk = require('./package.json');
+const axios = require('axios')
+// const aws = require('aws-sdk');
+// const ses = new aws.SES({region: 'eu-west-2'});
 
-const aws = require('aws-sdk');
-const ses = new aws.SES({region: 'eu-west-2'});
 
 /**PLAN:
  *  Get a list of the releases to check
+ *      Retrieve the releases from the Google Sheet
  *  Connect to the Discogs API
  *  Check the release - get number of vinyls for sale and the lowest price
  *  Send out an email to the user with the release details.
  * */
 
-const RELEASES = require('./releases.json');
+
 
 //Email needs to be verified before it can be used.
 const EMAIL_ADDRESS = 'auguste.tomaseviciute@gmail.com';
 const EMAIL_SUBJECT = 'Discogs vinyls release info';
+
+const getReleases =  () => {
+
+    return require('./releases.json');
+};
 
 const getReleaseInfo = async (releaseId, apiDB) => {
     try {
@@ -54,7 +61,9 @@ const sendMail = async (emailAddress, body) => {
 const collectAllInfo = async () => {
     const db = new Discogs(`${pk}.name}/${pk}.version}`).database();
     let messageBody = '<h1>Discogs vinyls release info</h1> <br/>';
-    for (let release of RELEASES) {
+    const releases = getReleases();
+
+    for (let release of releases) {
         const releaseInfo = await getReleaseInfo(release, db);
         if (releaseInfo) {
             messageBody += formatMessage(releaseInfo);
@@ -72,7 +81,7 @@ const formatMessage = (releaseInfo) => {
     }
 };
 
-collectAllInfo()
+
 module.exports.laughingDoodle = (event, context, callback) => {
     collectAllInfo();
 };
