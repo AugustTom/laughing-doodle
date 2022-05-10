@@ -43,7 +43,9 @@ const sendMail = async (emailAddress, body) => {
         },
         Message: {
             Body: {
-                Text: {Data: body},
+                Html: {
+                  Data: body
+                }
             },
             Subject: {Data: EMAIL_SUBJECT},
         },
