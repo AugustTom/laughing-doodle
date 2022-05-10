@@ -1,9 +1,14 @@
 'use strict';
 const Discogs = require('disconnect').Client;
 const pk = require('./package.json');
-const axios = require('axios')
-// const aws = require('aws-sdk');
-// const ses = new aws.SES({region: 'eu-west-2'});
+const aws = require('aws-sdk');
+const {GoogleSpreadsheet} = require('google-spreadsheet');
+
+const ses = new aws.SES({region: 'eu-west-2'});
+
+const clientSecret = require('./client_secret.json');
+
+const googleSheetID = '1Z0xXi2prUEyH-ydinip1UjR5Ra8DnHiItMp3lABVehA';
 
 
 /**PLAN:
@@ -20,10 +25,6 @@ const axios = require('axios')
 const EMAIL_ADDRESS = 'auguste.tomaseviciute@gmail.com';
 const EMAIL_SUBJECT = 'Discogs vinyls release info';
 
-const getReleases =  () => {
-
-    return require('./releases.json');
-};
 
 const getReleaseInfo = async (releaseId, apiDB) => {
     try {
@@ -61,16 +62,20 @@ const sendMail = async (emailAddress, body) => {
 const collectAllInfo = async () => {
     const db = new Discogs(`${pk}.name}/${pk}.version}`).database();
     let messageBody = '<h1>Discogs vinyls release info</h1> <br/>';
-    const releases = getReleases();
+    const releases = await getReleases();
 
-    for (let release of releases) {
-        const releaseInfo = await getReleaseInfo(release, db);
-        if (releaseInfo) {
-            messageBody += formatMessage(releaseInfo);
+    if (releases) {
+        for (let release of releases) {
+            const releaseInfo = await getReleaseInfo(release, db);
+            if (releaseInfo) {
+                messageBody += formatMessage(releaseInfo);
+            } else {
+                messageBody += `<h2>No release info for ${release}</h2>`;
+            }
         }
-    }
 
-    await sendMail(EMAIL_ADDRESS, messageBody);
+        await sendMail(EMAIL_ADDRESS, messageBody);
+    }
 }
 
 const formatMessage = (releaseInfo) => {
@@ -82,7 +87,33 @@ const formatMessage = (releaseInfo) => {
 };
 
 
+const getReleases = async () => {
+    const sheet = new GoogleSpreadsheet(googleSheetID);
+
+    try {
+        // Authenticate using the JSON file we set up earlier
+        await sheet.useServiceAccountAuth(clientSecret);
+        await sheet.loadInfo();
+
+        const tab = sheet.sheetsByIndex[0];
+        const rows = await tab.getRows();
+        let data = [];
+
+        if (rows.length > 0) {
+            rows.forEach(row => {
+                data.push(row['Release ID']);
+            });
+        } else {
+            return false;
+        }
+
+        return data;
+    } catch (err) {
+        console.log(err);
+        return false;
+    }
+}
+
 module.exports.laughingDoodle = (event, context, callback) => {
     collectAllInfo();
 };
-
