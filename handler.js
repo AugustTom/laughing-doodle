@@ -73,7 +73,7 @@ const collectAllInfo = async () => {
                 messageBody += `<h2>No release info for ${release}</h2>`;
             }
         }
-
+        messageBody += '<br/><br/> Releases can be edited in the Google Sheet. https://docs.google.com/spreadsheets/d/1Z0xXi2prUEyH-ydinip1UjR5Ra8DnHiItMp3lABVehA/edit#gid=0';
         await sendMail(EMAIL_ADDRESS, messageBody);
     }
 }
